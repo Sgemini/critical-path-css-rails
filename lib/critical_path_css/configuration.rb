@@ -21,6 +21,14 @@ module CriticalPathCss
       @config['routes']
     end
 
+    def action_routes
+      @config['action_routes']
+    end
+
+    def retry_times
+      @config['retry_times']
+    end
+
     def penthouse_options
       @config['penthouse_options'] || {}
     end

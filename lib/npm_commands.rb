@@ -2,54 +2,70 @@
 
 # NPM wrapper with helpful error messages
 class NpmCommands
-  # @return [Boolean] whether the installation succeeded
-  def install(*args)
-    return false unless check_nodejs_installed
-    STDERR.puts 'Installing npm dependencies...'
-    install_status = Dir.chdir File.expand_path('..', File.dirname(__FILE__)) do
-      system('npm', 'install', *args)
+  class << self
+    # @return [Boolean] whether the installation succeeded
+    def install
+      install_nodejs unless nodejs_installed?
     end
-    STDERR.puts(
-      *if install_status
-         ['npm dependencies installed']
-       else
-         ['-' * 60,
-          'Error: npm dependencies installation failed',
-          '-' * 60]
-       end
-    )
-    install_status
-  end
 
-  private
-
-  def check_nodejs_installed
-    return true if executable?('node')
-    STDERR.puts(
-      '-' * 60,
-      'Error: critical-path-css-rails requires NodeJS and NPM.',
-      *if executable?('brew')
-         ['  To install NodeJS and NPM, run:',
-          '  brew install node']
-       elsif Gem.win_platform?
-         ['  To install NodeJS and NPM, we recommend:',
-          '  https://github.com/coreybutler/nvm-windows/releases']
-       else
-         ['  To install NodeJS and NPM, we recommend:',
-          '  https://github.com/creationix/nvm']
-       end,
-      '-' * 60
-    )
-  end
-
-  def executable?(cmd)
-    exts = ENV['PATHEXT'] ? ENV['PATHEXT'].split(';') : ['']
-    ENV['PATH'].split(File::PATH_SEPARATOR).each do |path|
-      exts.each do |ext|
-        exe = File.join(path, "#{cmd}#{ext}")
-        return exe if File.executable?(exe) && !File.directory?(exe)
+    def run_npm_install
+      STDOUT.puts 'Installing npm dependencies...'
+      Dir.chdir File.expand_path('..', __dir__) do
+        `#{npm} install .`
       end
     end
-    nil
+
+    def npm
+      @@npm
+    end
+
+    def node
+      @@node
+    end
+
+    private
+
+    def nodejs_installed?
+      return true if executable?('node') && executable?('npm')
+    end
+
+    def executable?(cmd)
+      exts = ENV['PATHEXT'] ? ENV['PATHEXT'].split(';') : ['']
+      ENV['PATH'].split(File::PATH_SEPARATOR).each do |path|
+        exts.each do |ext|
+          exe = File.join(path, "#{cmd}#{ext}")
+          return exe if File.executable?(exe) && !File.directory?(exe)
+        end
+      end
+      nil
+    end
+
+    def install_nodejs
+      unless host_os.include?('linux') && architecture.include?('x86_64')
+        throw 'Install nodejs failed. Only support linux amd64.'
+      end
+      Dir.chdir File.expand_path('..', __dir__) do
+        `wget https://nodejs.org/dist/v6.11.2/#{node_filename}.tar.gz`
+        `tar xzf #{node_filename}.tar.gz`
+      end
+    end
+
+    def host_os
+      RbConfig::CONFIG['host_os']
+    end
+
+    def architecture
+      RbConfig::CONFIG['host_cpu']
+    end
+
+    def node_filename
+      'node-v6.11.2-linux-x64'
+    end
+
+    def node_path(command)
+      File.expand_path("../#{node_filename}/bin/#{command}", __dir__)
+    end
   end
+
+  @@node, @@npm = nodejs_installed? ? ['node', 'npm'] : [node_path('node'), node_path('npm')]
 end
