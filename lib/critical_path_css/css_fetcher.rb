@@ -1,5 +1,6 @@
 require 'json'
 require 'open3'
+require 'npm_commands'
 
 module CriticalPathCss
   class CssFetcher
@@ -10,7 +11,7 @@ module CriticalPathCss
     end
 
     def fetch
-      @config.routes.map { |route| [route, fetch_route(route)] }.to_h
+      @config.routes.map { |route| [route, css_for_route_retry(route)] }.to_h
     end
 
     def fetch_route(route)
@@ -41,7 +42,7 @@ module CriticalPathCss
         }
       }.merge(@config.penthouse_options)
       out, err, st = Dir.chdir(GEM_ROOT) do
-        Open3.capture3('node', 'lib/fetch-css.js', JSON.dump(options))
+        Open3.capture3(NpmCommands.node, 'lib/fetch-css.js', JSON.dump(options))
       end
       if !st.exitstatus.zero? || out.empty? && !err.empty?
         STDOUT.puts out
@@ -50,6 +51,23 @@ module CriticalPathCss
               "  with options=#{options.inspect}"
       end
       out
+    end
+
+    protected
+
+
+    def css_for_route_retry(route)
+      retry_times = 0
+      begin
+        css_for_route(route)
+      rescue StandardError => e
+        if retry_times < @config.retry_times
+          retry_times += 1
+          STDOUT.puts "#{e.message} retry #{retry_times}/#{@config.retry_times}"
+          retry
+        end
+        raise
+      end
     end
   end
 end

@@ -8,6 +8,9 @@ defaults: &defaults
   #   - /path/to/css/from/public/main.css
   routes:
     - /
+  action_routes:
+    articles#show: 'http://example.com/articles/1'
+  retry_times: 3
 
 development:
   <<: *defaults
