@@ -6,12 +6,15 @@ module CriticalPathCss
   CACHE_NAMESPACE = 'critical-path-css'.freeze
 
   def self.generate(route)
-    ::Rails.cache.write(route, fetcher.fetch_route(route), namespace: CACHE_NAMESPACE, expires_in: nil)
+    ::Rails.cache.write(route, fetcher.css_for_route_retry(route), namespace: CACHE_NAMESPACE, expires_in: nil)
   end
 
   def self.generate_all
-    fetcher.fetch.each do |route, css|
-      ::Rails.cache.write(route, css, namespace: CACHE_NAMESPACE, expires_in: nil)
+    fetcher.fetch_mobile.each do |route, css|
+      ::Rails.cache.write(['mobile', route], css, namespace: CACHE_NAMESPACE, expires_in: nil)
+    end
+    fetcher.fetch_desktop.each do |route, css|
+      ::Rails.cache.write(['desktop', route], css, namespace: CACHE_NAMESPACE, expires_in: nil)
     end
   end
 

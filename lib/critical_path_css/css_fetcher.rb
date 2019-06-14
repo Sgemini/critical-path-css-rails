@@ -5,6 +5,8 @@ require 'npm_commands'
 module CriticalPathCss
   class CssFetcher
     GEM_ROOT = File.expand_path(File.join('..', '..'), File.dirname(__FILE__))
+    MOBILE_WIDTH = 375.freeze
+    DESKTOP_WIDTH = 2000.freeze
 
     def initialize(config)
       @config = config
@@ -14,11 +16,11 @@ module CriticalPathCss
       @config.routes.map { |route| [route, css_for_route_retry(route)] }.to_h
     end
 
-    def fetch_route(route)
+    def fetch_route(route, screen_width)
       options = {
         'url' => @config.base_url + route,
         'css' => @config.path_for_route(route),
-        'width' => 1300,
+        'width' => screen_width,
         'height' => 900,
         'timeout' => 30_000,
         # CSS selectors to always include, e.g.:
@@ -53,13 +55,20 @@ module CriticalPathCss
       out
     end
 
+    def fetch_mobile
+      @config.routes.map { |route| [route, css_for_route_retry(route, MOBILE_WIDTH)] }.to_h
+    end
+
+    def fetch_desktop
+      @config.routes.map { |route| [route, css_for_route_retry(route, DESKTOP_WIDTH)] }.to_h
+    end
+
     protected
 
-
-    def css_for_route_retry(route)
+    def css_for_route_retry(route, screen_width)
       retry_times = 0
       begin
-        css_for_route(route)
+        fetch_route(route, screen_width)
       rescue StandardError => e
         if retry_times < @config.retry_times
           retry_times += 1
