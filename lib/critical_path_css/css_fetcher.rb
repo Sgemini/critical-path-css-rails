@@ -5,22 +5,22 @@ require 'npm_commands'
 module CriticalPathCss
   class CssFetcher
     GEM_ROOT = File.expand_path(File.join('..', '..'), File.dirname(__FILE__))
-    MOBILE_WIDTH = 375.freeze
-    DESKTOP_WIDTH = 2000.freeze
+    MOBILE_OPTION = { screen_width: 375, user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1' }.to_h
+    DESKTOP_OPTION = { screen_width: 2000, user_agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/601.3.9 (KHTML, like Gecko) Version/9.0.2 Safari/601.3.9' }.to_h
 
     def initialize(config)
       @config = config
     end
 
     def fetch
-      @config.routes.map { |route| [route, css_for_route_retry(route)] }.to_h
+      @config.routes.map { |route| [route, css_for_route_retry(route, MOBILE_OPTION)] }.to_h
     end
 
-    def fetch_route(route, screen_width)
+    def fetch_route(route, critical_option)
       options = {
         'url' => @config.base_url + route,
         'css' => @config.path_for_route(route),
-        'width' => screen_width,
+        'width' => critical_option[:screen_width],
         'height' => 900,
         'timeout' => 30_000,
         # CSS selectors to always include, e.g.:
@@ -33,7 +33,7 @@ module CriticalPathCss
         # characters; strip out inline base64 encoded resources larger than this
         'maxEmbeddedBase64Length' => 1000,
         # specify which user agent string when loading the page
-        'userAgent' => 'Penthouse Critical Path CSS Generator',
+        'userAgent' => critical_option[:user_agent],
         # ms; render wait timeout before CSS processing starts (default: 100)
         'renderWaitTime' => 100,
         # set to false to load (external) JS (default: true)
@@ -56,19 +56,19 @@ module CriticalPathCss
     end
 
     def fetch_mobile
-      @config.routes.map { |route| [route, css_for_route_retry(route, MOBILE_WIDTH)] }.to_h
+      @config.routes.map { |route| [route, css_for_route_retry(route, MOBILE_OPTION)] }.to_h
     end
 
     def fetch_desktop
-      @config.routes.map { |route| [route, css_for_route_retry(route, DESKTOP_WIDTH)] }.to_h
+      @config.routes.map { |route| [route, css_for_route_retry(route, DESKTOP_OPTION)] }.to_h
     end
 
     protected
 
-    def css_for_route_retry(route, screen_width)
+    def css_for_route_retry(route, critical_option)
       retry_times = 0
       begin
-        fetch_route(route, screen_width)
+        fetch_route(route, critical_option)
       rescue StandardError => e
         if retry_times < @config.retry_times
           retry_times += 1

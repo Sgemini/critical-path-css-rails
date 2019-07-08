@@ -11,9 +11,11 @@ module CriticalPathCss
 
   def self.generate_all
     fetcher.fetch_mobile.each do |route, css|
+      puts "critical mobile #{route}"
       ::Rails.cache.write(['mobile', route], css, namespace: CACHE_NAMESPACE, expires_in: nil)
     end
     fetcher.fetch_desktop.each do |route, css|
+      puts "critical desktop #{route}"
       ::Rails.cache.write(['desktop', route], css, namespace: CACHE_NAMESPACE, expires_in: nil)
     end
   end
